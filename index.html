@@ -106,19 +106,23 @@ const keys = new Set();
 
 window.addEventListener("keydown", (event) => {
     keys.add(event.key.toLowerCase());
-
-    if (
-        [
-            "arrowup",
-            "arrowdown",
-            "arrowleft",
-            "arrowright",
-            " "
-        ].includes(event.key.toLowerCase())
-    ) {
-        event.preventDefault();
-    }
 });
+
+window.addEventListener("keyup", (event) => {
+    keys.delete(event.key.toLowerCase());
+});
+
+window.addEventListener("blur", () => {
+    keys.clear();
+});
+
+canvas.setAttribute("tabindex", "0");
+
+canvas.addEventListener("click", () => {
+    canvas.focus();
+});
+
+canvas.focus();
 
 window.addEventListener("keyup", (event) => {
     keys.delete(event.key.toLowerCase());
