@@ -1,37 +1,752 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LAST CIRCLE</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #07130d;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: crosshair;
+        }
+
+        #loading {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #07130d;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #loading.hidden {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
+    <div id="loading">LAST CIRCLE</div>
     <canvas id="gameCanvas"></canvas>
 
     <script>
+        "use strict";
+
+        // ============================================================
+        // LAST CIRCLE
+        // Core foundation
+        // ============================================================
+
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        const loadingScreen = document.getElementById("loading");
+
+        // ------------------------------------------------------------
+        // Canvas
+        // ------------------------------------------------------------
+
+        let screenWidth = window.innerWidth;
+        let screenHeight = window.innerHeight;
 
         function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            screenWidth = window.innerWidth;
+            screenHeight = window.innerHeight;
+
+            const devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+
+            canvas.width = Math.floor(screenWidth * devicePixelRatio);
+            canvas.height = Math.floor(screenHeight * devicePixelRatio);
+
+            canvas.style.width = screenWidth + "px";
+            canvas.style.height = screenHeight + "px";
+
+            ctx.setTransform(
+                devicePixelRatio,
+                0,
+                0,
+                devicePixelRatio,
+                0,
+                0
+            );
         }
 
         window.addEventListener("resize", resizeCanvas);
         resizeCanvas();
 
-        ctx.fillStyle = "#1b5e35";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // ------------------------------------------------------------
+        // Game world
+        // ------------------------------------------------------------
 
-        ctx.fillStyle = "white";
-        ctx.font = "bold 32px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(
-            "LAST CIRCLE",
-            canvas.width / 2,
-            canvas.height / 2
-        );
+        const WORLD = {
+            width: 5000,
+            height: 5000
+        };
+
+        // ------------------------------------------------------------
+        // Input
+        // ------------------------------------------------------------
+
+        const keys = new Set();
+
+        const mouse = {
+            screenX: screenWidth / 2,
+            screenY: screenHeight / 2,
+            worldX: 0,
+            worldY: 0
+        };
+
+        window.addEventListener("keydown", (event) => {
+            keys.add(event.key.toLowerCase());
+
+            if (
+                ["w", "a", "s", "d", "arrowup", "arrowdown",
+                 "arrowleft", "arrowright", " "].includes(
+                    event.key.toLowerCase()
+                )
+            ) {
+                event.preventDefault();
+            }
+        });
+
+        window.addEventListener("keyup", (event) => {
+            keys.delete(event.key.toLowerCase());
+        });
+
+        window.addEventListener("blur", () => {
+            keys.clear();
+        });
+
+        canvas.addEventListener("mousemove", (event) => {
+            mouse.screenX = event.clientX;
+            mouse.screenY = event.clientY;
+        });
+
+        // ------------------------------------------------------------
+        // Camera
+        // ------------------------------------------------------------
+
+        const camera = {
+            x: 0,
+            y: 0,
+
+            update() {
+                this.x = player.x - screenWidth / 2;
+                this.y = player.y - screenHeight / 2;
+
+                this.x = Math.max(
+                    0,
+                    Math.min(this.x, WORLD.width - screenWidth)
+                );
+
+                this.y = Math.max(
+                    0,
+                    Math.min(this.y, WORLD.height - screenHeight)
+                );
+            }
+        };
+
+        // ------------------------------------------------------------
+        // Player
+        // ------------------------------------------------------------
+
+        const player = {
+            x: WORLD.width / 2,
+            y: WORLD.height / 2,
+
+            radius: 18,
+            speed: 260,
+
+            angle: 0,
+
+            health: 100,
+            maxHealth: 100
+        };
+
+        // ------------------------------------------------------------
+        // Map locations
+        // ------------------------------------------------------------
+
+        const locations = [
+            {
+                name: "Riverside Town",
+                x: 900,
+                y: 950,
+                width: 1000,
+                height: 850
+            },
+
+            {
+                name: "Ironworks",
+                x: 3150,
+                y: 850,
+                width: 1000,
+                height: 850
+            },
+
+            {
+                name: "Pinewood",
+                x: 700,
+                y: 2850,
+                width: 1200,
+                height: 1100
+            },
+
+            {
+                name: "Sunset Coast",
+                x: 3150,
+                y: 3100,
+                width: 1200,
+                height: 900
+            },
+
+            {
+                name: "Greenfield Farms",
+                x: 2150,
+                y: 2050,
+                width: 900,
+                height: 800
+            },
+
+            {
+                name: "Echo Base",
+                x: 3350,
+                y: 2100,
+                width: 900,
+                height: 700
+            }
+        ];
+
+        // ------------------------------------------------------------
+        // Roads
+        // ------------------------------------------------------------
+
+        const roads = [
+            {
+                x1: 450,
+                y1: 2400,
+                x2: 4550,
+                y2: 2400,
+                width: 100
+            },
+
+            {
+                x1: 2400,
+                y1: 450,
+                x2: 2400,
+                y2: 4550,
+                width: 100
+            },
+
+            {
+                x1: 1100,
+                y1: 1000,
+                x2: 2400,
+                y2: 2400,
+                width: 70
+            },
+
+            {
+                x1: 2400,
+                y1: 2400,
+                x2: 3700,
+                y2: 3300,
+                width: 70
+            }
+        ];
+
+        // ------------------------------------------------------------
+        // Decorative world objects
+        // ------------------------------------------------------------
+
+        const trees = [];
+        const rocks = [];
+
+        function seededRandom(seed) {
+            let value = seed;
+
+            return function () {
+                value = (value * 1664525 + 1013904223) % 4294967296;
+                return value / 4294967296;
+            };
+        }
+
+        const random = seededRandom(823741);
+
+        for (let i = 0; i < 650; i++) {
+            const x = 150 + random() * (WORLD.width - 300);
+            const y = 150 + random() * (WORLD.height - 300);
+
+            trees.push({
+                x,
+                y,
+                radius: 20 + random() * 12
+            });
+        }
+
+        for (let i = 0; i < 180; i++) {
+            const x = 150 + random() * (WORLD.width - 300);
+            const y = 150 + random() * (WORLD.height - 300);
+
+            rocks.push({
+                x,
+                y,
+                radius: 8 + random() * 10
+            });
+        }
+
+        // ------------------------------------------------------------
+        // Coordinate helpers
+        // ------------------------------------------------------------
+
+        function screenToWorld(screenX, screenY) {
+            return {
+                x: screenX + camera.x,
+                y: screenY + camera.y
+            };
+        }
+
+        function worldToScreen(worldX, worldY) {
+            return {
+                x: worldX - camera.x,
+                y: worldY - camera.y
+            };
+        }
+
+        // ------------------------------------------------------------
+        // Player movement
+        // ------------------------------------------------------------
+
+        function updatePlayer(deltaTime) {
+            let moveX = 0;
+            let moveY = 0;
+
+            if (keys.has("w") || keys.has("arrowup")) {
+                moveY -= 1;
+            }
+
+            if (keys.has("s") || keys.has("arrowdown")) {
+                moveY += 1;
+            }
+
+            if (keys.has("a") || keys.has("arrowleft")) {
+                moveX -= 1;
+            }
+
+            if (keys.has("d") || keys.has("arrowright")) {
+                moveX += 1;
+            }
+
+            const length = Math.hypot(moveX, moveY);
+
+            if (length > 0) {
+                moveX /= length;
+                moveY /= length;
+
+                player.x += moveX * player.speed * deltaTime;
+                player.y += moveY * player.speed * deltaTime;
+            }
+
+            player.x = Math.max(
+                player.radius,
+                Math.min(WORLD.width - player.radius, player.x)
+            );
+
+            player.y = Math.max(
+                player.radius,
+                Math.min(WORLD.height - player.radius, player.y)
+            );
+
+            const target = screenToWorld(
+                mouse.screenX,
+                mouse.screenY
+            );
+
+            mouse.worldX = target.x;
+            mouse.worldY = target.y;
+
+            player.angle = Math.atan2(
+                mouse.worldY - player.y,
+                mouse.worldX - player.x
+            );
+        }
+
+        // ------------------------------------------------------------
+        // Drawing helpers
+        // ------------------------------------------------------------
+
+        function drawIsland() {
+            ctx.fillStyle = "#28633a";
+            ctx.fillRect(0, 0, screenWidth, screenHeight);
+
+            const island = worldToScreen(0, 0);
+
+            ctx.fillStyle = "#4e9b4d";
+
+            ctx.fillRect(
+                island.x,
+                island.y,
+                WORLD.width,
+                WORLD.height
+            );
+        }
+
+        function drawRoads() {
+            for (const road of roads) {
+                const start = worldToScreen(road.x1, road.y1);
+                const end = worldToScreen(road.x2, road.y2);
+
+                ctx.beginPath();
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(end.x, end.y);
+
+                ctx.strokeStyle = "#a78359";
+                ctx.lineWidth = road.width;
+                ctx.lineCap = "round";
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(end.x, end.y);
+
+                ctx.strokeStyle = "#c9aa79";
+                ctx.lineWidth = road.width * 0.72;
+                ctx.stroke();
+            }
+        }
+
+        function drawLocations() {
+            for (const location of locations) {
+                const position = worldToScreen(
+                    location.x,
+                    location.y
+                );
+
+                ctx.fillStyle = "rgba(255,255,255,0.035)";
+
+                ctx.fillRect(
+                    position.x,
+                    position.y,
+                    location.width,
+                    location.height
+                );
+
+                const center = worldToScreen(
+                    location.x + location.width / 2,
+                    location.y + location.height / 2
+                );
+
+                ctx.save();
+
+                ctx.font = "bold 24px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
+                ctx.fillStyle = "rgba(255,255,255,0.92)";
+                ctx.shadowColor = "rgba(0,0,0,0.65)";
+                ctx.shadowBlur = 8;
+
+                ctx.fillText(
+                    location.name,
+                    center.x,
+                    center.y
+                );
+
+                ctx.restore();
+            }
+        }
+
+        function drawTrees() {
+            for (const tree of trees) {
+                const position = worldToScreen(
+                    tree.x,
+                    tree.y
+                );
+
+                if (
+                    position.x < -60 ||
+                    position.x > screenWidth + 60 ||
+                    position.y < -60 ||
+                    position.y > screenHeight + 60
+                ) {
+                    continue;
+                }
+
+                ctx.beginPath();
+                ctx.arc(
+                    position.x,
+                    position.y + 8,
+                    tree.radius * 0.7,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fillStyle = "#5a3d26";
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(
+                    position.x,
+                    position.y,
+                    tree.radius,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fillStyle = "#174b2b";
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(
+                    position.x - tree.radius * 0.25,
+                    position.y - tree.radius * 0.25,
+                    tree.radius * 0.55,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fillStyle = "#28783d";
+                ctx.fill();
+            }
+        }
+
+        function drawRocks() {
+            for (const rock of rocks) {
+                const position = worldToScreen(
+                    rock.x,
+                    rock.y
+                );
+
+                if (
+                    position.x < -40 ||
+                    position.x > screenWidth + 40 ||
+                    position.y < -40 ||
+                    position.y > screenHeight + 40
+                ) {
+                    continue;
+                }
+
+                ctx.beginPath();
+                ctx.arc(
+                    position.x,
+                    position.y,
+                    rock.radius,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fillStyle = "#68716b";
+                ctx.fill();
+            }
+        }
+
+        function drawPlayer() {
+            const position = worldToScreen(
+                player.x,
+                player.y
+            );
+
+            ctx.save();
+
+            ctx.translate(position.x, position.y);
+            ctx.rotate(player.angle);
+
+            // Aim direction
+            ctx.fillStyle = "#242b2a";
+            ctx.fillRect(
+                5,
+                -4,
+                27,
+                8
+            );
+
+            // Body
+            ctx.beginPath();
+            ctx.arc(
+                0,
+                0,
+                player.radius,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fillStyle = "#dcecff";
+            ctx.fill();
+
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#16232a";
+            ctx.stroke();
+
+            // Direction marker
+            ctx.beginPath();
+            ctx.moveTo(14, 0);
+            ctx.lineTo(25, -7);
+            ctx.lineTo(25, 7);
+            ctx.closePath();
+
+            ctx.fillStyle = "#7ec8ff";
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawHUD() {
+            ctx.save();
+
+            // Health panel
+            const panelX = 24;
+            const panelY = screenHeight - 70;
+            const panelWidth = 250;
+            const panelHeight = 38;
+
+            ctx.fillStyle = "rgba(5,12,9,0.78)";
+            ctx.fillRect(
+                panelX,
+                panelY,
+                panelWidth,
+                panelHeight
+            );
+
+            ctx.fillStyle = "#222";
+            ctx.fillRect(
+                panelX + 8,
+                panelY + 8,
+                panelWidth - 16,
+                22
+            );
+
+            ctx.fillStyle = "#63d17b";
+            ctx.fillRect(
+                panelX + 8,
+                panelY + 8,
+                (panelWidth - 16) *
+                (player.health / player.maxHealth),
+                22
+            );
+
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 15px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            ctx.fillText(
+                `${Math.round(player.health)} / ${player.maxHealth}`,
+                panelX + panelWidth / 2,
+                panelY + panelHeight / 2
+            );
+
+            // Game title
+            ctx.font = "bold 20px Arial";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            ctx.fillStyle = "rgba(255,255,255,0.9)";
+
+            ctx.fillText(
+                "LAST CIRCLE",
+                24,
+                22
+            );
+
+            // Controls
+            ctx.font = "14px Arial";
+            ctx.fillStyle = "rgba(255,255,255,0.7)";
+
+            ctx.fillText(
+                "WASD / Arrow Keys — Move",
+                24,
+                50
+            );
+
+            ctx.restore();
+        }
+
+        // ------------------------------------------------------------
+        // Main update
+        // ------------------------------------------------------------
+
+        function update(deltaTime) {
+            updatePlayer(deltaTime);
+            camera.update();
+        }
+
+        // ------------------------------------------------------------
+        // Main render
+        // ------------------------------------------------------------
+
+        function render() {
+            ctx.clearRect(
+                0,
+                0,
+                screenWidth,
+                screenHeight
+            );
+
+            drawIsland();
+            drawRoads();
+            drawLocations();
+            drawTrees();
+            drawRocks();
+            drawPlayer();
+            drawHUD();
+        }
+
+        // ------------------------------------------------------------
+        // Game loop
+        // ------------------------------------------------------------
+
+        let previousTime = performance.now();
+
+        function gameLoop(currentTime) {
+            const deltaTime = Math.min(
+                (currentTime - previousTime) / 1000,
+                0.05
+            );
+
+            previousTime = currentTime;
+
+            update(deltaTime);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ------------------------------------------------------------
+        // Start
+        // ------------------------------------------------------------
+
+        loadingScreen.classList.add("hidden");
+
+        camera.update();
+        render();
+
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
+```
