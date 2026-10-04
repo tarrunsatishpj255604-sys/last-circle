@@ -370,9 +370,36 @@ const waterAreas = [];
             if (length > 0) {
                 moveX /= length;
                 moveY /= length;
+const nextX = player.x + moveX * player.speed * deltaTime;
+const nextY = player.y + moveY * player.speed * deltaTime;
 
-                player.x += moveX * player.speed * deltaTime;
-                player.y += moveY * player.speed * deltaTime;
+// Building collision
+let blocked = false;
+
+for (const building of buildings) {
+    const closestX = Math.max(
+        building.x,
+        Math.min(nextX, building.x + building.width)
+    );
+
+    const closestY = Math.max(
+        building.y,
+        Math.min(nextY, building.y + building.height)
+    );
+
+    const dx = nextX - closestX;
+    const dy = nextY - closestY;
+
+    if (dx * dx + dy * dy < player.radius * player.radius) {
+        blocked = true;
+        break;
+    }
+}
+
+if (!blocked) {
+    player.x = nextX;
+    player.y = nextY;
+}
             }
 
             player.x = Math.max(
