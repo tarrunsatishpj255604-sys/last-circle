@@ -463,8 +463,11 @@ ctx.fillRect(
 
         for (let y = water.y + 25; y < water.y + water.height; y += 35) {
             ctx.beginPath();
-            ctx.moveTo(water.x, y);
-            ctx.lineTo(water.x + water.width, y);
+           const lineStart = worldToScreen(water.x, y);
+const lineEnd = worldToScreen(water.x + water.width, y);
+
+ctx.moveTo(lineStart.x, lineStart.y);
+ctx.lineTo(lineEnd.x, lineEnd.y);
             ctx.stroke();
         }
     }
