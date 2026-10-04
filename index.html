@@ -448,14 +448,14 @@ if (!blocked) {
     // WATER AREAS
     // ============================================================
 
-    for (const water of waterAreas) {
-        ctx.fillStyle = "#4b9fc8";
-        ctx.fillRect(
-            water.x,
-            water.y,
-            water.width,
-            water.height
-        );
+    const waterScreen = worldToScreen(water.x, water.y);
+
+ctx.fillRect(
+    waterScreen.x,
+    waterScreen.y,
+    water.width,
+    water.height
+);
 
         // subtle water bands
         ctx.strokeStyle = "rgba(255,255,255,0.12)";
