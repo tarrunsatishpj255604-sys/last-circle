@@ -417,7 +417,141 @@ const waterAreas = [];
                 WORLD.width,
                 WORLD.height
             );
+            // ============================================================
+    // WATER AREAS
+    // ============================================================
+
+    for (const water of waterAreas) {
+        ctx.fillStyle = "#4b9fc8";
+        ctx.fillRect(
+            water.x,
+            water.y,
+            water.width,
+            water.height
+        );
+
+        // subtle water bands
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 3;
+
+        for (let y = water.y + 25; y < water.y + water.height; y += 35) {
+            ctx.beginPath();
+            ctx.moveTo(water.x, y);
+            ctx.lineTo(water.x + water.width, y);
+            ctx.stroke();
         }
+    }
+
+    // ============================================================
+    // BUILDINGS
+    // ============================================================
+
+    for (const building of buildings) {
+        let wallColor = "#d8c7a4";
+        let roofColor = "#a84f42";
+
+        if (building.type === "shop") {
+            wallColor = "#e4d5b8";
+            roofColor = "#3d718c";
+        }
+
+        if (building.type === "warehouse") {
+            wallColor = "#8c9699";
+            roofColor = "#50595c";
+        }
+
+        if (building.type === "industrial") {
+            wallColor = "#777f82";
+            roofColor = "#41484b";
+        }
+
+        if (building.type === "cabin") {
+            wallColor = "#9b704e";
+            roofColor = "#5d3d2b";
+        }
+
+        if (building.type === "farmhouse") {
+            wallColor = "#e1d2aa";
+            roofColor = "#9b493b";
+        }
+
+        if (building.type === "barn") {
+            wallColor = "#a94d3f";
+            roofColor = "#74342e";
+        }
+
+        if (building.type === "research") {
+            wallColor = "#c9d5d9";
+            roofColor = "#526c78";
+        }
+
+        // building shadow
+        ctx.fillStyle = "rgba(0,0,0,0.20)";
+        ctx.fillRect(
+            building.x + 12,
+            building.y + 12,
+            building.width,
+            building.height
+        );
+
+        // main building
+        ctx.fillStyle = wallColor;
+        ctx.fillRect(
+            building.x,
+            building.y,
+            building.width,
+            building.height
+        );
+
+        // roof
+        ctx.fillStyle = roofColor;
+        ctx.fillRect(
+            building.x,
+            building.y,
+            building.width,
+            Math.min(28, building.height * 0.2)
+        );
+
+        // outline
+        ctx.strokeStyle = "rgba(25,30,30,0.45)";
+        ctx.lineWidth = 5;
+        ctx.strokeRect(
+            building.x,
+            building.y,
+            building.width,
+            building.height
+        );
+
+        // windows
+        const windowSize = 18;
+        const windowGap = 32;
+
+        ctx.fillStyle = "#8fd3e8";
+
+        for (
+            let wx = building.x + 25;
+            wx < building.x + building.width - 15;
+            wx += windowGap
+        ) {
+            ctx.fillRect(
+                wx,
+                building.y + building.height * 0.45,
+                windowSize,
+                14
+            );
+        }
+
+        // door
+        ctx.fillStyle = "#5b4638";
+        ctx.fillRect(
+            building.x + building.width / 2 - 10,
+            building.y + building.height - 35,
+            20,
+            35
+        );
+    }
+        }
+    
 
         function drawRoads() {
             for (const road of roads) {
